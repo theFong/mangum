@@ -124,6 +124,15 @@ class Mangum:
                 path = event["path"]
                 http_method = event["httpMethod"]
 
+            is_binary = event.get("isBase64Encoded", False)
+            body = event.get("body") or b""
+            if is_binary:
+                body = base64.b64decode(body)
+            elif not isinstance(body, bytes):
+                body = body.encode()
+
+            event["headers"]["Content-Length"] = str(len(body))
+
             headers = (
                 {k.lower(): v for k, v in event.get("headers").items()}
                 if event.get("headers")
@@ -160,13 +169,6 @@ class Mangum:
                 "aws.event": event,
                 "aws.context": context,
             }
-
-            is_binary = event.get("isBase64Encoded", False)
-            body = event.get("body") or b""
-            if is_binary:
-                body = base64.b64decode(body)
-            elif not isinstance(body, bytes):
-                body = body.encode()
 
             asgi_cycle = HTTPCycle(
                 scope, body=body, text_mime_types=self.text_mime_types
